@@ -1,0 +1,323 @@
+# ==========================================================
+# SAFE VOICE AI - COMPLETE PROJECT
+# Jupyter Notebook | Python | Frontend + Backend
+# ==========================================================
+
+# STEP 1: INSTALL REQUIRED PACKAGES
+import sys
+import subprocess
+import importlib.util
+
+if importlib.util.find_spec("ipywidgets") is None:
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "ipywidgets"
+    ])
+
+if importlib.util.find_spec("SpeechRecognition") is None:
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "SpeechRecognition"
+    ])
+
+if importlib.util.find_spec("psutil") is None:
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "psutil"
+    ])
+
+import ipywidgets as widgets
+from IPython.display import display, clear_output
+import speech_recognition as sr
+import psutil
+
+
+# STEP 2: AI COMMAND DETECTION
+def analyze_command(text):
+    text = text.lower().strip()
+
+    emergency_phrases = [
+        "help me", "i need help", "emergency",
+        "save me", "sos", "i am in danger",
+        "bachao", "madad karo", "mujhe help chahiye"
+    ]
+
+    if any(phrase in text for phrase in emergency_phrases):
+        return "SOS"
+
+    return "NORMAL"
+
+
+# STEP 3: VOICE RECOGNITION
+def listen_to_voice():
+    recognizer = sr.Recognizer()
+
+    try:
+        with sr.Microphone() as source:
+            log("Listening... Speak now.")
+            recognizer.adjust_for_ambient_noise(source, duration=1)
+            audio = recognizer.listen(
+                source, timeout=5, phrase_time_limit=8
+            )
+
+        return recognizer.recognize_google(audio)
+
+    except Exception as error:
+        return "ERROR: " + str(error)
+
+
+# STEP 4: SOS SYSTEM - DEMO ONLY
+def trigger_sos(message):
+    log("================================")
+    log("SOS DEMO ACTIVATED")
+    log("Message: " + message)
+    log("No emergency call or SMS was sent.")
+    log("================================")
+
+
+# STEP 5: LOCATION MODULE
+def get_location():
+    # Real GPS is not configured in this notebook
+    return None, None
+
+
+# STEP 6: TRUSTED CONTACTS
+def get_contacts():
+    # Add trusted contacts only after secure configuration
+    return []
+
+
+# STEP 7: BATTERY PROTECTION
+def get_battery_status():
+    try:
+        battery = psutil.sensors_battery()
+
+        if battery is None:
+            return {
+                "percentage": "Unavailable",
+                "charging": "Unknown",
+                "status": "Battery information unavailable"
+            }
+
+        percent = battery.percent
+        charging = battery.power_plugged
+
+        if percent <= 10 and not charging:
+            status = "Critical"
+        elif percent <= 20 and not charging:
+            status = "Low"
+        else:
+            status = "Normal"
+
+        return {
+            "percentage": percent,
+            "charging": charging,
+            "status": status
+        }
+
+    except Exception:
+        return {
+            "percentage": "Unavailable",
+            "charging": "Unknown",
+            "status": "Battery information unavailable"
+        }
+
+
+# STEP 8: OUTPUT AREA
+output = widgets.Output()
+
+def log(message):
+    with output:
+        print(message)
+
+
+# STEP 9: FRONTEND
+title = widgets.HTML("""
+<div style="background:#153448;color:white;padding:22px;
+text-align:center;border-radius:12px;">
+<h1>🛡️ SAFE VOICE AI</h1>
+<p>Voice-Based Personal Safety Assistant</p>
+<p>Educational Project Prototype</p>
+</div>
+""")
+
+status = widgets.HTML("<h3>🟢 System Status: Ready</h3>")
+
+voice_btn = widgets.Button(
+    description="🎤 Start Voice",
+    button_style="primary",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+sos_btn = widgets.Button(
+    description="🚨 SOS Demo",
+    button_style="danger",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+location_btn = widgets.Button(
+    description="📍 Location",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+contacts_btn = widgets.Button(
+    description="👥 Contacts",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+battery_btn = widgets.Button(
+    description="🔋 Battery",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+test_btn = widgets.Button(
+    description="🧪 Test AI",
+    button_style="success",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+report_btn = widgets.Button(
+    description="📋 Project Report",
+    layout=widgets.Layout(width="180px", height="45px")
+)
+
+
+# STEP 10: BUTTON FUNCTIONS
+def voice_action(button):
+    with output:
+        clear_output(wait=True)
+
+    result = listen_to_voice()
+
+    with output:
+        if result.startswith("ERROR:"):
+            print(result)
+            print("Check microphone permissions and audio support.")
+            return
+
+        print("Recognized speech:", result)
+        command = analyze_command(result)
+        print("AI result:", command)
+
+        if command == "SOS":
+            trigger_sos("Voice command detected: " + result)
+        else:
+            print("Normal command detected.")
+
+
+def sos_action(button):
+    with output:
+        clear_output(wait=True)
+    trigger_sos("Manual SOS button activated")
+
+
+def location_action(button):
+    with output:
+        clear_output(wait=True)
+        latitude, longitude = get_location()
+
+        if latitude is None:
+            print("Live GPS is not configured.")
+            print("No actual coordinates are available.")
+        else:
+            print("Latitude:", latitude)
+            print("Longitude:", longitude)
+
+
+def contacts_action(button):
+    with output:
+        clear_output(wait=True)
+        print("Trusted contacts:", get_contacts())
+        print("Contact management is not configured.")
+
+
+def battery_action(button):
+    with output:
+        clear_output(wait=True)
+        print("BATTERY STATUS")
+        for key, value in get_battery_status().items():
+            print(f"{key}: {value}")
+
+
+def test_action(button):
+    with output:
+        clear_output(wait=True)
+        tests = [
+            ("I need help", "SOS"),
+            ("Hello", "NORMAL"),
+            ("I am in danger", "SOS"),
+            ("Good morning", "NORMAL"),
+            ("Bachao", "SOS")
+        ]
+
+        passed = 0
+        print("AI COMMAND TESTS")
+        print("----------------")
+
+        for phrase, expected in tests:
+            actual = analyze_command(phrase)
+            result = "PASS" if actual == expected else "FAIL"
+            passed += actual == expected
+            print(f"{phrase} -> {actual} [{result}]")
+
+        print(f"\nTests passed: {passed}/{len(tests)}")
+
+
+def report_action(button):
+    with output:
+        clear_output(wait=True)
+        print("SAFE VOICE AI - PROJECT REPORT")
+        print("=" * 36)
+        print("Language: Python")
+        print("Environment: Jupyter Notebook")
+        print("Frontend: ipywidgets")
+        print()
+        print("Modules:")
+        print("1. Frontend interface")
+        print("2. Voice recognition")
+        print("3. AI command detection")
+        print("4. SOS demo")
+        print("5. Location and contacts")
+        print("6. Battery status and testing")
+        print()
+        print("Limitations:")
+        print("- Live GPS is not configured.")
+        print("- Real emergency SMS/calls are not enabled.")
+        print("- Microphone support depends on the environment.")
+        print("- This is not a deployed mobile application.")
+        print()
+        print("Future scope:")
+        print("- Mobile app development")
+        print("- Secure trusted contacts")
+        print("- Live GPS integration")
+        print("- Tested emergency notifications")
+
+
+# STEP 11: CONNECT BUTTONS
+voice_btn.on_click(voice_action)
+sos_btn.on_click(sos_action)
+location_btn.on_click(location_action)
+contacts_btn.on_click(contacts_action)
+battery_btn.on_click(battery_action)
+test_btn.on_click(test_action)
+report_btn.on_click(report_action)
+
+
+# STEP 12: DISPLAY COMPLETE APP
+display(title)
+display(status)
+
+display(widgets.HTML("<h3>Safety Features</h3>"))
+display(widgets.HBox([voice_btn, sos_btn]))
+display(widgets.HBox([location_btn, contacts_btn]))
+display(widgets.HBox([battery_btn, test_btn]))
+display(report_btn)
+
+display(widgets.HTML("<h3>Output</h3>"))
+display(output)
+
+log("Safe Voice AI initialized successfully.")
+log("Click Test AI to verify command detection.")
+log("SOS currently runs in demo mode only.")
+
+
+# STEP 13: FINAL SUBMISSION INFORMATION
+print("Safe Voice AI code loaded.")
+print("After testing, save your notebook as Safe_Voice_AI.ipynb")
